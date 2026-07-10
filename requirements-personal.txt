@@ -1,0 +1,8 @@
+# Personal additions on top of the pinned OpenMontage requirements.
+# Demucs is MIT. Torch installs as the CPU wheel by default; the optional
+# CUDA wheel for the RTX 3060 is documented in the Phase 3 plan.
+demucs>=4.0,<5.0
+soundfile>=0.12,<0.14
+requests>=2.31,<3.0
+python-dotenv>=1.0,<2.0
+pytest>=8.0,<9.0
