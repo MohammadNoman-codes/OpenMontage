@@ -22,6 +22,8 @@ required_skills:
   - pipelines/talking-head/asset-director
   - pipelines/talking-head/edit-director
   - pipelines/talking-head/compose-director
+  - pipelines/talking-head/predict
+  - pipelines/talking-head/advise
   - pipelines/talking-head/publish-director
   - meta/reviewer
   - meta/checkpoint-protocol
@@ -209,6 +211,46 @@ stages:
     success_criteria:
       - Schema-valid render_report artifact
       - Output video file exists and is playable
+
+  - name: predict
+    skill: pipelines/talking-head/predict
+    required_artifacts_in:
+      - render_report
+      - edit_decisions
+    optional_artifacts_in:
+      - script
+      - final_review
+    produces:
+      - variant_predictions
+    tools_available: []
+    checkpoint_required: true
+    human_approval_default: false
+    review_focus:
+      - Every rendered variant produced a version-stamped prediction row linked to its variant id
+      - Seed or provisional bands carry the low-confidence label and are never treated as certain
+      - The prediction reused OpenMontage's transcript rather than re-transcribing
+    success_criteria:
+      - One prediction row exists per rendered variant, each linked through predictions.variant_id
+      - Each prediction has a non-null baseline_mode and a confidence within the capped range for its regime
+
+  - name: advise
+    skill: pipelines/talking-head/advise
+    required_artifacts_in:
+      - variant_predictions
+    optional_artifacts_in:
+      - render_report
+    produces:
+      - variant_ranking
+    tools_available: []
+    checkpoint_required: true
+    human_approval_default: true
+    review_focus:
+      - The ranking groups by platform and orders by predicted percentile
+      - Ties and low-confidence groups are flagged as relative ordering only
+      - The operator, not the system, selects the single variant to post through OpenMontage's own human-approval gate
+    success_criteria:
+      - A variant ranking is produced with one advisor pack per variant
+      - The operator approves exactly one variant through the existing approval gate
 
   - name: publish
     skill: pipelines/talking-head/publish-director
