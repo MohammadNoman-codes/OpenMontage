@@ -41,13 +41,17 @@ the registered Instagram or TikTok publisher tool, record the returned
 permalink and post time IMMEDIATELY, before anything else, by running (one line;
 substitute the values):
 
-    E:\Video AI\.venv\Scripts\python.exe E:\Video AI\cli.py posted SHORT_CODE --at POST_TIME_ISO --permalink PERMALINK
+    E:\Video AI\.venv\Scripts\python.exe E:\Video AI\cli.py posted SHORT_CODE --at POST_TIME_ISO --permalink PERMALINK --variant-id VARIANT_ID
 
-For TikTok the publisher tool returns no permalink, so the operator supplies the
-post URL from the app. That posted command anchors the loop: the Slice C
-scheduler picks the posted variant up automatically at T+7 and T+14. A publish
-without a recorded posted row is a loop-closure failure, not a cosmetic
-omission.
+VARIANT_ID is the id of the exact variant the operator approved and posted; the
+predict stage ranking (Step 1) printed each variant's id, so pass the approved
+one here. This marks which sibling was posted so the learning loop attributes
+the realized actuals to the right edit. For a single-variant video it can be
+omitted (the loop auto-attributes). For TikTok the publisher tool returns no
+permalink, so the operator supplies the post URL from the app. That posted
+command anchors the loop: the Slice C scheduler picks the posted variant up
+automatically at T+7 and T+14. A publish without a recorded posted row is a
+loop-closure failure, not a cosmetic omission.
 
 ### Step 4: Self-Evaluate
 
