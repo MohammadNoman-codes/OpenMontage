@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import shutil
 import subprocess
-import sys
 import tempfile
 from pathlib import Path
 
@@ -131,16 +130,37 @@ def separate_vocals(wav_path: str, work_dir: str, device: str = "auto") -> str:
 
     Separation is computed over the whole track for quality, but the stem
     is APPLIED only inside detected segments by splice_vocals.
+
+    Separation runs IN PROCESS and the stem is written with soundfile on
+    purpose. The `demucs.separate` CLI writes its stems through
+    torchaudio.save, and torchaudio 2.9+ routes every save through
+    TorchCodec, which needs FFmpeg 4 to 7 shared libraries present. This
+    machine has a static FFmpeg 8 on PATH, so the CLI path fails with
+    "Could not load this library: libtorchcodec_core4.dll" on any clip
+    that actually contains music. soundfile writes the WAV directly and
+    keeps the tool working with no extra system dependency.
     """
+    import torch
+    from demucs.apply import apply_model
+    from demucs.audio import convert_audio
+    from demucs.pretrained import get_model
+
     device = _resolve_device(device)
-    _run(
-        [
-            sys.executable, "-m", "demucs.separate",
-            "--two-stems", "vocals", "-n", DEMUCS_MODEL,
-            "-d", device, "-o", work_dir, wav_path,
-        ]
-    )
-    stem = Path(work_dir) / DEMUCS_MODEL / Path(wav_path).stem / "vocals.wav"
+    samples, sr = sf.read(wav_path, dtype="float32", always_2d=True)
+
+    model = get_model(DEMUCS_MODEL)
+    model.eval()
+
+    wav = torch.from_numpy(samples.T)
+    wav = convert_audio(wav, sr, model.samplerate, model.audio_channels)
+    ref = wav.mean(0)
+    wav = (wav - ref.mean()) / ref.std()
+    sources = apply_model(model, wav[None], device=device, progress=False)[0]
+    sources = sources * ref.std() + ref.mean()
+    vocals = sources[model.sources.index("vocals")].cpu().numpy().T
+
+    stem = Path(work_dir) / "vocals.wav"
+    sf.write(str(stem), vocals, model.samplerate)
     if not stem.is_file():
         raise RuntimeError(f"demucs did not produce the vocals stem at {stem}")
     return str(stem)

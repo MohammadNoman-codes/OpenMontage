@@ -1191,7 +1191,7 @@ class VideoCompose(BaseTool):
         self,
         edit_decisions: dict[str, Any],
         resolved_cuts: list[dict],
-        scene_plan: list[dict] | None = None,
+        scene_plan: list[dict] | dict[str, Any] | None = None,
     ) -> ToolResult | None:
         """Pre-compose quality gate — blocks render on critical violations.
 
@@ -1227,7 +1227,15 @@ class VideoCompose(BaseTool):
 
         # --- 2. Slideshow risk check ---
         renderer_family = edit_decisions.get("renderer_family")
-        scenes = scene_plan or []
+        # Callers pass either the scenes list or the full scene_plan artifact
+        # (every other artifact input on this tool is the full artifact, so
+        # both shapes reach here). Iterating the artifact dict yields its keys
+        # as strings, which used to make score_slideshow_risk raise and the
+        # gate get skipped with only a log line.
+        if isinstance(scene_plan, dict):
+            scenes = scene_plan.get("scenes") or []
+        else:
+            scenes = scene_plan or []
 
         # If no scene_plan passed, try to extract scene info from cuts
         if not scenes and resolved_cuts:
@@ -2585,10 +2593,27 @@ class VideoCompose(BaseTool):
 
         # Layer 2: edit_decisions subtitle style
         if edit_decisions:
-            ed_style = edit_decisions.get("subtitles", {}).get("style", {})
-            for k, v in ed_style.items():
+            ed_subs = edit_decisions.get("subtitles") or {}
+            # edit_decisions.schema.json declares subtitles.style as a STRING
+            # (the display mode: sentence, word-by-word, karaoke) and keeps the
+            # styling fields beside it. A dict here is the older rich form and
+            # still applies; a string used to crash this method with
+            # "'str' object has no attribute 'items'".
+            ed_style = ed_subs.get("style")
+            if isinstance(ed_style, dict):
+                for k, v in ed_style.items():
+                    if v is not None:
+                        resolved[k] = v
+            for src_key, dst_key in (
+                ("font", "font"),
+                ("font_size", "font_size"),
+                ("color", "primary_color"),
+                ("outline_color", "outline_color"),
+                ("background", "back_color"),
+            ):
+                v = ed_subs.get(src_key)
                 if v is not None:
-                    resolved[k] = v
+                    resolved[dst_key] = v
 
         # Layer 3: Explicit override (highest priority)
         if explicit_style:
