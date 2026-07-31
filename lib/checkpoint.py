@@ -19,14 +19,16 @@ from schemas.artifacts import ARTIFACT_NAMES, validate_artifact
 # All known stages across all pipelines (used only for artifact name lookup).
 ALL_KNOWN_STAGES = frozenset([
     "research", "proposal", "idea", "script", "scene_plan",
-    "assets", "edit", "compose", "publish",
+    "assets", "edit", "compose", "predict", "advise", "publish",
 ])
 
 # Backward-compatible alias — existing code / tests that import STAGES still work.
 # New code should use get_pipeline_stages(pipeline_type) instead.
 STAGES = ["research", "proposal", "idea", "script", "scene_plan",
-          "assets", "edit", "compose", "publish"]
+          "assets", "edit", "compose", "predict", "advise", "publish"]
 
+# predict and advise sit between compose and publish in the talking-head
+# manifest; their canonical artifact names match that manifest's `produces`.
 CANONICAL_STAGE_ARTIFACTS = {
     "research": "research_brief",
     "proposal": "proposal_packet",
@@ -36,6 +38,8 @@ CANONICAL_STAGE_ARTIFACTS = {
     "assets": "asset_manifest",
     "edit": "edit_decisions",
     "compose": "render_report",
+    "predict": "variant_predictions",
+    "advise": "variant_ranking",
     "publish": "publish_log",
 }
 

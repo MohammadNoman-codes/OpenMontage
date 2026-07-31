@@ -12,6 +12,13 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from tools.base_tool import BaseTool, ToolResult, ToolTier, ToolStatus, DependencyError
 from tools.tool_registry import ToolRegistry
 from lib.pipeline_loader import load_pipeline, get_stage_order, get_required_tools, list_pipelines
+from lib.checkpoint import (
+    ALL_KNOWN_STAGES,
+    CANONICAL_STAGE_ARTIFACTS,
+    CheckpointValidationError,
+    read_checkpoint,
+    write_checkpoint,
+)
 
 
 # ---- Tool imports ----
@@ -306,7 +313,10 @@ class TestTalkingHeadManifest:
     def test_manifest_has_all_stages(self):
         manifest = load_pipeline("talking-head")
         stages = get_stage_order(manifest)
-        assert stages == ["idea", "script", "scene_plan", "assets", "edit", "compose", "publish"]
+        assert stages == [
+            "idea", "script", "scene_plan", "assets", "edit", "compose",
+            "predict", "advise", "publish",
+        ]
 
     def test_manifest_references_phase1_tools(self):
         manifest = load_pipeline("talking-head")
@@ -331,6 +341,112 @@ class TestTalkingHeadManifest:
         for stage in manifest["stages"]:
             if stage["name"] in ("idea", "publish"):
                 assert stage.get("human_approval_default") is True
+
+
+# ---- Contract: predict and advise are registered for checkpointing ----
+
+
+class TestPredictAdviseCheckpoints:
+    """Declaring a stage in the manifest is not enough.
+
+    lib/checkpoint.py owns the stage to canonical-artifact registry, and a
+    stage missing from it raises KeyError on every checkpoint write, so both
+    Phase 4 stages must round-trip through the public checkpoint API.
+    """
+
+    PREDICTIONS = {
+        "version": "1.0",
+        "variants": [
+            {
+                "variant_id": "v1",
+                "platform": "instagram",
+                "band": "p40_p60",
+                "confidence": "low",
+            }
+        ],
+    }
+    RANKING = {
+        "version": "1.0",
+        "ranked": [{"variant_id": "v1", "rank": 1, "platform": "instagram"}],
+    }
+
+    def test_registry_matches_manifest_produces(self):
+        manifest = load_pipeline("talking-head")
+        produces = {s["name"]: s.get("produces", []) for s in manifest["stages"]}
+        assert CANONICAL_STAGE_ARTIFACTS["predict"] == "variant_predictions"
+        assert CANONICAL_STAGE_ARTIFACTS["advise"] == "variant_ranking"
+        assert produces["predict"] == [CANONICAL_STAGE_ARTIFACTS["predict"]]
+        assert produces["advise"] == [CANONICAL_STAGE_ARTIFACTS["advise"]]
+        assert {"predict", "advise"} <= ALL_KNOWN_STAGES
+
+    def test_predict_checkpoint_round_trips(self, tmp_path):
+        write_checkpoint(
+            tmp_path,
+            "proj",
+            "predict",
+            "completed",
+            {"variant_predictions": self.PREDICTIONS},
+            pipeline_type="talking-head",
+        )
+        cp = read_checkpoint(tmp_path, "proj", "predict")
+        assert cp is not None
+        assert cp["stage"] == "predict"
+        assert cp["status"] == "completed"
+        assert cp["artifacts"]["variant_predictions"]["variants"][0]["variant_id"] == "v1"
+
+    def test_advise_checkpoint_round_trips_through_its_gate(self, tmp_path):
+        # advise carries human_approval_default: true, so a bare "completed"
+        # write must still be refused by the existing gate enforcement.
+        with pytest.raises(CheckpointValidationError):
+            write_checkpoint(
+                tmp_path,
+                "proj",
+                "advise",
+                "completed",
+                {"variant_ranking": self.RANKING},
+                pipeline_type="talking-head",
+            )
+
+        write_checkpoint(
+            tmp_path,
+            "proj",
+            "advise",
+            "awaiting_human",
+            {"variant_ranking": self.RANKING},
+            pipeline_type="talking-head",
+        )
+        pending = read_checkpoint(tmp_path, "proj", "advise")
+        assert pending is not None
+        assert pending["status"] == "awaiting_human"
+        assert pending["human_approval_required"] is True
+
+        write_checkpoint(
+            tmp_path,
+            "proj",
+            "advise",
+            "completed",
+            {"variant_ranking": self.RANKING},
+            pipeline_type="talking-head",
+            human_approved=True,
+        )
+        cp = read_checkpoint(tmp_path, "proj", "advise")
+        assert cp is not None
+        assert cp["stage"] == "advise"
+        assert cp["status"] == "completed"
+        assert cp["human_approved"] is True
+        assert cp["artifacts"]["variant_ranking"]["ranked"][0]["rank"] == 1
+
+    def test_missing_canonical_artifact_rejected(self, tmp_path):
+        for stage in ("predict", "advise"):
+            with pytest.raises(CheckpointValidationError):
+                write_checkpoint(
+                    tmp_path,
+                    "proj",
+                    stage,
+                    "awaiting_human",
+                    {},
+                    pipeline_type="talking-head",
+                )
 
 
 # ---- Contract: skill files exist ----

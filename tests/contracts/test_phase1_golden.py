@@ -39,7 +39,10 @@ class TestTalkingHeadManifest:
     def test_all_stages_present(self):
         manifest = load_pipeline("talking-head")
         stage_names = get_stage_order(manifest)
-        expected = ["idea", "script", "scene_plan", "assets", "edit", "compose", "publish"]
+        expected = [
+            "idea", "script", "scene_plan", "assets", "edit", "compose",
+            "predict", "advise", "publish",
+        ]
         assert stage_names == expected
 
     def test_manifest_listed(self):
