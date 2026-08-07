@@ -14,6 +14,20 @@ You have a scene plan and asset manifest. Your job is to assemble the edit decis
 
 ## Process
 
+### Step 0: Read the Operator's Edit Brief (if there is one)
+
+If the operator gives you the path to an edit brief (a markdown file with hook
+directive, cut plan, captions, pacing, call to action, rationale, and honesty
+note sections), read it before anything else and treat its directives as the
+operator's own creative direction for this edit: it says what they want out of
+the video, in their words, and it is the answer to any question about intent
+that the artifacts do not settle. It does not change how you work. Every gate,
+schema, and approval in this pipeline applies exactly as usual, the brief never
+approves a stage on the operator's behalf, and anything in it that conflicts
+with a gate or with the footage goes back to the operator as a question rather
+than being followed. The brief carries no prediction and is not evidence about
+how the video will perform.
+
 ### Step 1: Apply Silence Cuts (if planned)
 
 If the scene plan includes silence removal, run `silence_cutter` before defining cuts:
