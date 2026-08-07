@@ -1,4 +1,4 @@
-# Edit Director — Talking Head Pipeline
+# Edit Director: Talking Head Pipeline
 
 ## When to Use
 
@@ -44,10 +44,10 @@ silence_cutter.execute({
 ```
 
 **Choosing the mode:**
-- `remove` — Hard jump cuts. Best for fast-paced social content (Reels, TikTok, Shorts)
-- `speed_up` — Fast-forwards through silence at 6x. Less jarring for longer-form content (YouTube, LinkedIn)
+- `remove`: Hard jump cuts. Best for fast-paced social content (Reels, TikTok, Shorts)
+- `speed_up`: Fast-forwards through silence at 6x. Less jarring for longer-form content (YouTube, LinkedIn)
 
-Present the result to the user: "Removed X seconds of silence (Y%) — output is now Z seconds."
+Present the result to the user: "Removed X seconds of silence (Y%), output is now Z seconds."
 
 Use the cut footage as the source for all subsequent steps.
 
