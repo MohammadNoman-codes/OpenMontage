@@ -10,6 +10,11 @@ import {
   TitledVideo,
   calculateTitledVideoMetadata,
 } from "./TitledVideo";
+import {
+  HookTitle,
+  CtaEndcard,
+  MotionTemplateProps,
+} from "./MotionTemplates";
 import { EndTag, EndTagProps } from "./components/EndTag";
 import { HeroTitle } from "./components/HeroTitle";
 import { ProductReveal, ProductRevealProps } from "./components/ProductReveal";
@@ -267,6 +272,40 @@ export const Root: React.FC = () => {
           highlightColor: "#FACC15",
           backgroundColor: "rgba(15, 23, 42, 0.75)",
         }}
+      />
+      {/* Motion templates: a closed set of two, both 9:16 by default. The
+          render entry (tools/video/remotion_motion_overlay.py) passes the
+          source clip's own width, height and frame range, so the output keeps
+          the resolution of whatever it is drawn on. */}
+      <Composition
+        id="MotionHookTitle"
+        component={HookTitle}
+        durationInFrames={30 * 300}
+        fps={30}
+        width={1080}
+        height={1920}
+        defaultProps={{
+          videoSrc: "",
+          text: "",
+          inSeconds: 0,
+          outSeconds: 2.5,
+          accentColor: "#22D3EE",
+        } as MotionTemplateProps}
+      />
+      <Composition
+        id="MotionCtaEndcard"
+        component={CtaEndcard}
+        durationInFrames={30 * 300}
+        fps={30}
+        width={1080}
+        height={1920}
+        defaultProps={{
+          videoSrc: "",
+          text: "",
+          inSeconds: 0,
+          outSeconds: 3,
+          accentColor: "#22D3EE",
+        } as MotionTemplateProps}
       />
       <Composition
         id="CollageBurst"
