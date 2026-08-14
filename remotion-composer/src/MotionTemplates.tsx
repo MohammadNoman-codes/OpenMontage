@@ -82,6 +82,10 @@ const HookTitleOverlay: React.FC<{ text: string; accentColor: string }> = ({
   const inset = Math.round(width * SAFE_MARGIN);
 
   // Hold the title, then ease it out over the last third of a second.
+  // durationInFrames here is this overlay's OWN window, not the composition's
+  // declared length: useVideoConfig() reads the enclosing <Sequence> (the one
+  // MotionFrame opens with durationInFrames={overlayFrames}), so the fade
+  // lands at the end of the hold whatever the composition is declared at.
   const fadeOut = interpolate(
     frame,
     [Math.max(0, durationInFrames - 10), Math.max(1, durationInFrames - 2)],
